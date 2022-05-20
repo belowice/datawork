@@ -1,0 +1,185 @@
+# script to convert excel-reported ELRs to csv format, according to State standards
+
+
+import os
+import pandas as pd
+
+# starting variables for the starting/input file 'infile' and the resulting/output file 'outfil'
+directory_infile = directory_infile # enter (local) directory to retrieve files
+directory_outfile = directory_infile # enter (local) directory to retrieve files
+infile = infile_name # name of source file that will be transformed
+outfile = outfile_name # name of result file after transformation is complete
+
+os.chdir(directory_infile) 
+df = pd.read_excel(infile)
+
+#Rename field headers to State standards
+df.rename(columns=
+              ({
+                  'PERFORMING_LABORATORY':'Facility Name',
+                  'FACILITY_CLIA':'Facility CLIA',
+                  'FACILITY_ADDRESS':'Facility Street Address',
+                  'FACILITY_CITY':'Facility City',
+                  'FACILITY_STATE':'Facility State',
+                  'PERFORMING_FACILITY_ZIPCODE':'Facility Zip',
+                  'FACILITY_PHONE':'Facility Phone',
+                  'PATIENT_NAME_FIRST':'Patient First Name',
+                  'PATIENT_NAME_MIDDLE':'Patient Middle Initial or Name',
+                  'PATIENT_NAME_LAST':'Patient Last Name',
+                  'PATIENT_DOB':'Patient Date of Birth',
+                  'PATIENT_SEX':'Patient Sex',
+                  'PATIENT_RACE':'Race',
+                  'PATIENT_ETHNICITY':'Ethnicity',
+                  'PATIENT_ADDRESS':'Patient Street Address',
+                  'PATIENT_CITY':'Patient City',
+                  'PATIENT_STATE':'Patient State',
+                  'PATIENT_ZIPCODE':'Patient Zip',
+                  'PATIENT_COUNTY':'Patient County',
+                  'PATIENT_PHONE':'Patient Phone Number',
+                  'ORDERING_PROVIDER_NAME_FIRST':'Provider First Name',
+                  'ORDERING_PROVIDER_NAME_LAST':'Provider Last Name',
+                  'ORDERING_PROVIDER_NPI':'Provider ID/NPI',
+                  'PERFORMING_FACILITY_NAME':'Provider Facility Name',
+                  'ORDERING_PROVIDER_ZIPCODE':'Provider Zip',
+                  'COLLECTED_DT_TM':'Specimen Collection Date',
+                  'ORDERED_DT_TM':'Date Test Ordered',
+                  'RESULTED_DT_TM':'Result Date',
+                  'SPECIMEN_TYPE_SCT_CODE':'Specimen Type',
+                  'SPECIMEN_TYPE_SCT_DESCRIPTION':'Specimen Site',
+                  'TEST_MNEMONIC':'Test Name',
+                  'TEST_RESULT_SCT_DESCRIPTION':'Result',
+                  'ACCESSION_NBR':'Accession Number',
+                  'TEST_CODE_LOINC':'Test Code',
+                  'TEST_RESULT_SCT_CODE':'Result Code',
+                  'PERFORMING_DEVICE':'Device Identifier',
+                  'RESULT_COMMENTS':'Notes'
+              })
+              ,
+              inplace=True)
+
+
+df = df.reindex(columns= 
+           [
+            'Facility Name',
+            'Facility CLIA',
+            'Facility Street Address',
+            'Facility City',
+            'Facility State',
+            'Facility Zip',
+            'Patient Identifier',
+            'Facility Phone',
+            'Patient First Name',
+            'Patient Middle Initial or Name',
+            'Patient Last Name',
+            'Patient Date of Birth',
+            'Patient Sex',
+            'Race',
+            'Ethnicity',
+            'Preferred Language',
+            'Patient Street Address',
+            'Patient City',
+            'Patient State',
+            'Patient Zip',
+            'Patient County',
+            'Patient Phone Number',
+            'OK to Contact Patient',
+            'Provider First Name',
+            'Provider Last Name',
+            'Provider Facility Name',
+            'Provider ID/NPI',
+            'Provider Street Address',
+            'Provider City',
+            'Provider State',
+            'Provider Zip',
+            'Provider Phone Number',
+            'Specimen ID',
+            'Specimen Collection Date',
+            'Specimen Received Date',
+            'Date Test Ordered',
+            'Result Date',
+            'Date Reported',
+            'Specimen Type',
+            'Specimen Site',
+            'Test Name',
+            'Result',
+            'Accession Number',
+            'Test Code',
+            'Result Code',
+            'Device Identifier',
+            'Notes'
+        ]
+        )
+
+# Format Patient Phone Numbers
+df['Patient Phone Number'] = df['Patient Phone Number'].replace(to_replace =' ', value = '', regex = True)
+df['Patient Phone Number'] = df['Patient Phone Number'].replace(to_replace ='\(', value = '', regex = True)
+df['Patient Phone Number'] = df['Patient Phone Number'].replace(to_replace ='\)', value = '', regex = True)
+df['Patient Phone Number'] = df['Patient Phone Number'].replace(to_replace ='-', value = '', regex = True)
+df['Patient Phone Number'] = df['Patient Phone Number'].replace(to_replace ='\xa0', value = '', regex = True)
+
+# Format Dates
+df['Patient Date of Birth'] = pd.to_datetime(df['Patient Date of Birth']).dt.strftime('%Y%m%d')
+df['Specimen Collection Date'] = pd.to_datetime(df['Specimen Collection Date']).dt.strftime('%Y%m%d')
+df['Date Test Ordered'] = pd.to_datetime(df['Date Test Ordered']).dt.strftime('%Y%m%d')
+df['Result Date'] = pd.to_datetime(df['Result Date']).dt.strftime('%Y%m%d')
+
+# Format Patient sex
+df.loc[df['Patient Sex'] == 'Female',['Patient Sex']] = 'F'
+df.loc[df['Patient Sex'] == 'Male',['Patient Sex']] = 'M'
+df.loc[df['Patient Sex'] == 'Unknown',['Patient Sex']] = 'U'
+
+# Add Ordering Provider Details
+df['Provider Street Address'] = provider_address # street address of laboratory
+df.loc[df['Provider Street Address'].isna(),['Provider Street Address']] = provider_address
+df['Provider City'] = provider_city # city of laboratory
+df.loc[df['Provider City'].isna(),['Provider City']] = provider_city
+df['Provider State'] = provider_state # state of laboratory
+df.loc[df['Provider State'].isna(),['Provider State']] = provider_state
+df.loc[df['Provider Zip'].isna(),['Provider Zip']] = provider_zip # zip code of laboratory
+df.loc[df['Provider Phone Number'].isna(),['Provider Phone Number']] = provider_phone #phone number of laboratory as a string and with no special characters. Example '5555555555'
+
+# Format Race
+df['Race'] = df['Race'].replace(to_replace ='\xa0', value = '', regex = True)
+df.loc[df['Race'] == 'Unknown',['Race']] = 'UNK'
+df.loc[df['Race'].isna(),['Race']] = 'UNK'
+df.loc[df['Race'] == 'White',['Race']] = '2106-3'
+df.loc[df['Race'] == 'Black or African American',['Race']] = '2054-5'
+df.loc[df['Race'] == 'Asian',['Race']] = '2028-9'
+df.loc[df['Race'] == 'American Indian or Alaska Native',['Race']] = '1002-5'
+df.loc[df['Race'] == 'Native Hawaiian or Pacific Islander',['Race']] = '2076-8'
+df.loc[df['Race'] == 'Other Race',['Race']] = '2131-1'
+
+# Format Ethnicity
+df.loc[df['Ethnicity'] == 'Hispanic or Latino',['Ethnicity']] = 'H'
+df.loc[df['Ethnicity'] == 'Not Hispanic or Latino',['Ethnicity']] = 'N'
+df.loc[df['Ethnicity'] == 'Other',['Ethnicity']] = 'U'
+df.loc[df['Ethnicity'] == 'Unknown',['Ethnicity']] = 'U'
+df.loc[df['Ethnicity'].isna(),['Ethnicity']] = 'U'
+
+# Update Test Result and Test Result code for Unknown/Not Detected values
+df.loc[df['Result Code'] == 'UNKNOWN/UNMAPPED',['Result Code']] = '260415000'
+df.loc[df['Result'] == 'UNKNOWN/UNMAPPED',['Result']] = 'Not detected'
+
+df['Patient Zip'] = df['Patient Zip'].fillna(0.0).astype(int)
+
+# Populate missing Specimen ID with Accession ID and Specimen Received Date with Specimen Collection Date
+df['Specimen ID'].fillna(df['Accession Number'], inplace=True)
+df['Specimen Received Date'].fillna(df['Specimen Collection Date'],inplace=True)
+
+# Ensure proper CLIA is used for submission and overwrite incorrect entries
+
+df['Facility CLIA'] = facility_clia # find facility's CLIA # @ https://www.cdc.gov/clia/LabSearch.html
+
+#Populate missing Facility Information
+df['Facility Name'].fillna(value=facility_name, inplace=True) # facility_name is the name of the facility that is submitting the ELR. this may be the same as the lab
+df['Facility Street Address'].fillna(value=facility_address,inplace=True) #street address of the facility
+df['Facility City'].fillna(value=facility_city,inplace=True) # city of the facility
+df['Facility State'].fillna(value=facility_state,inplace=True) # state of the facility
+df['Facility Zip'].fillna(value=facility_zip,inplace=True) #zip code of the facility
+df['Facility Phone'].fillna(value=facility_phone,inplace=True) # phone number of the facility
+
+# Write final dataset to CSV
+os.chdir(directory_outfile)
+df.to_csv(outfile, index=False, quotechar='"')
+
+print(df.index) #count of all records in the dataframe
